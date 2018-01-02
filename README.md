@@ -1,2 +1,2 @@
 # dashboard-text-mining
-Códigos das funções para gerar o dashboard que criei enquanto era estagiário na dataprev. Realiza mineração de texto, análise exploratória e análise de sentimentos de base de dados de redes sociais adquiridos com o software Social Search.
+Function codes to generate the dashboard I created while I was trainee in dataprev. Performs text mining, exploratory analysis and analysis of social network database sentiments acquired with Social Search software.
