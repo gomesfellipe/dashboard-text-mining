@@ -114,11 +114,12 @@ Painel de controle para número de palavras
 sliderInput("nn", label = "Número de palavras:",
             min = 10, max = 100, value = 1, step = 10)
 
-selectInput("n1", label = "Min.freq:",
-             choices = c(1, 3, 5, 10, 15), selected = 2)
+sliderInput("n2", label = "Número máximo de palavras na núvem:",
+            min = 25, max = 200, value = 25, step = 25)
 
-selectInput("n2", label = "Número máximo de palavras na núvem:",
-             choices = c(20, 35, 50, 70, 100), selected = 1)
+selectInput("n1", label = "Min.freq:",
+             choices = c(1, 3, 5, 10, 15), selected = 1)
+
 ```
 
 Row {.tabset .tabset-fade}
@@ -465,10 +466,26 @@ plot(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf, corThreshold = .11)
 Agrupamento
 ==================
 
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+Painel de controle para número de clusters
+
+```{r,warning=F}
+sliderInput("nnclusters", label = "Número de clusters:",
+            min = 1, max = 5, value = 2, step = 1)
+
+# selectInput("ngrams", label = "N grams",
+#              choices = c(1, 2, 3, 4, 5), selected = 1)
+
+# selectInput("n2", label = "Número máximo de palavras na núvem:",
+#              choices = c(20, 35, 50, 70, 100), selected = 1)
+```
+
 Row
 -------------------------
     
-### Cluster de frequência de palavras sem remover o sufixo
+### Dendograma de frequência de palavras 
 
 ```{r,warning=F}
 wordcloud_cluster=rquery.wordcloud(x, type=c("text"),
@@ -485,18 +502,19 @@ cluster = cluster %>%
 cluster = cluster / rowSums(cluster)
 cluster_dist = dist(cluster, method = "euclidian")
 
+renderPlot({
 #hclust
-k=2 #Numero de clusters
+k=input$nnclusters #Numero de clusters
 cluster_hclust =  hclust(cluster_dist, method = "ward.D")
 #Graficamente
 plot(cluster_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
 #Separando em grupos:
 rect.hclust(cluster_hclust, k = k, border="blue")
-
+})
 ```
 
 
-### Cluster de relevância de palavras sem remover o sufixo
+### Dendograma de relevância de palavras 
 
 ```{r,warning=F}
 wordcloud_cluster_tf.idf=rquery.wordcloud(x, type=c("text"),
@@ -513,25 +531,26 @@ cluster_tf.idf = cluster_tf.idf %>%
 cluster_tf.idf = cluster_tf.idf / rowSums(cluster_tf.idf)
 cluster_tf.idf_dist = dist(cluster_tf.idf, method = "euclidian")
 
+renderPlot({
 #hclust
-k=2 #Numero de clusters
+k=input$nnclusters #Numero de clusters
 cluster_tf.idf_hclust =  hclust(cluster_tf.idf_dist, method = "ward.D")
 #Graficamente
 plot(cluster_tf.idf_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
 #Separando em grupos:
 rect.hclust(cluster_tf.idf_hclust, k = k, border="blue")
-
+})
 ```
 
 Row
 -------------------------
 
-### Cluster de frequência de palavras removendo o sufixo
+### Mesmo dendograma de frequência de palavras 
 
 ```{r,warning=F}
 wordcloud_cluster2=rquery.wordcloud(x, type=c("text"),
                              lang="portuguese", excludeWords=stopwords_adicionais,
-                             textStemming=T,  colorPalette="black",
+                             textStemming=F,  colorPalette="black",
                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F)
 
 # Eliminando termos dispersos
@@ -543,23 +562,30 @@ cluster2 = cluster2 %>%
 cluster2 = cluster2 / rowSums(cluster2)
 cluster2_dist = dist(cluster2, method = "euclidian")
 
+renderPlot({
 #hclust
-k=2 #Numero de clusters
+k=input$nnclusters #Numero de clusters
 cluster2_hclust =  hclust(cluster2_dist, method = "ward.D")
-#Graficamente
-plot(cluster2_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
-#Separando em grupos:
-rect.hclust(cluster2_hclust, k = k, border="blue")
 
+#Graficamente
+# plot(cluster2_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
+# #Separando em grupos:
+# rect.hclust(cluster2_hclust, k = k, border="blue")
+
+colors = brewer.pal(k,"Dark2")
+clus = cutree(cluster2_hclust, k)
+plot(ape::as.phylo(cluster2_hclust), type = "unrooted", tip.color = colors[clus], cex = 0.6,
+     no.margin = TRUE)
+})
 ```
 
 
-### Cluster de relevância de palavras removendo o sufixo
+### Mesmo dendograma de relevância de palavras
 
 ```{r,warning=F}
 wordcloud_cluster_tf.idf2=rquery.wordcloud(x, type=c("text"),
                              lang="portuguese", excludeWords=stopwords_adicionais,
-                             textStemming=T,  colorPalette="black",
+                             textStemming=F,  colorPalette="black",
                              min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F)
 
 # Eliminando termos dispersos
@@ -571,46 +597,122 @@ cluster_tf.idf2 = cluster_tf.idf2 %>%
 cluster_tf.idf2 = cluster_tf.idf2 / rowSums(cluster_tf.idf2)
 cluster_tf.idf2_dist = dist(cluster_tf.idf2, method = "euclidian")
 
+renderPlot({
 #hclust
-k=2 #Numero de clusters
+k=input$nnclusters #Numero de clusters
 cluster_tf.idf2_hclust =  hclust(cluster_tf.idf2_dist, method = "ward.D")
-#Graficamente
-plot(cluster_tf.idf2_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
-#Separando em grupos:
-rect.hclust(cluster_tf.idf2_hclust, k = k, border="blue")
 
+# #Graficamente
+# plot(cluster_tf.idf2_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
+# #Separando em grupos:
+# rect.hclust(cluster_tf.idf2_hclust, k = k, border="blue")
+
+colors = brewer.pal(k,"Dark2")
+clus = cutree(cluster_tf.idf2_hclust, k)
+plot(ape::as.phylo(cluster_tf.idf2_hclust), type = "unrooted", tip.color = colors[clus], cex = 0.6,
+     no.margin = TRUE)
+})
 ```
 
-<!-- k-means -->
-<!-- ====== -->
+k-means
+======
 
-<!-- --------- -->
+Row
+------------------------------------------------------------------------
+
+### k-means
+
+```{r,warning=F}
+source("plot_kmeans.R")
+
+#Analise de Agrupamento
+#k-medias:
+
+wordcloud_kmeans=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=F,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 1)
+
+a=t(as.matrix(wordcloud_kmeans$tdm))
+
+rowTotals <- apply(a, 1, sum) #Find the sum of words in each Document
+a   <- a[rowTotals> 0, ]           #remove all docs without words
+a=t(a)
+
+g1=plot_kmeans(a,4)
+plotly::ggplotly(g1)
+```
+
+<!-- ### k-means para 2 palavras -->
 
 <!-- ```{r,warning=F} -->
+<!-- source("plot_kmeans.R") -->
+
 <!-- #Analise de Agrupamento -->
 <!-- #k-medias: -->
-<!-- wordcloud_kmeans=rquery.wordcloud(x, type=c("text"), -->
+
+<!-- wordcloud_kmeans2=rquery.wordcloud(x, type=c("text"), -->
 <!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
-<!--                              textStemming=T,  colorPalette="black", -->
-<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F) -->
+<!--                              textStemming=F,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 2) -->
 
-<!-- a=as.matrix(wordcloud_kmeans$tdm) -->
-<!-- #Pacotes necessarios para o exemplo: -->
-<!-- library(stats) -->
+<!-- a2=t(as.matrix(wordcloud_kmeans2$tdm)) -->
 
-<!-- #Para implementar o algoritmo k-medias: -->
-<!-- perfils = kmeans(as.matrix(wordcloud_kmeans$tdm),           #data.frame contendo dados numericos para serem submetidos ao processo de agrupamento -->
-<!--                 3,                     #numero que indica o numero de grupos a ser descoberto -->
-<!--                 iter.max=100)            #eh o numero maximo de iteracoes permitido no algoritmo -->
+<!-- rowTotals <- apply(a2, 1, sum) #Find the sum of words in each Document -->
+<!-- a2   <- a2[rowTotals> 0, ]           #remove all docs without words -->
+<!-- a2=t(a2) -->
 
-<!-- #O numero de exemplares associados a cada grupo: -->
-<!-- perfils$size -->
-
-<!-- #Os centroides finais na forma de uma matriz de medias dos exemplares associados a cada grupo: -->
-<!-- perfils$centers -->
-
-<!-- #O indice do grupo ao qual cada exemplar foi associado: -->
-<!-- perfils$cluster[perfils$cluster==2] -->
-
+<!-- plot_kmeans(a2,4) -->
 <!-- ``` -->
 
+<!-- Row -->
+<!-- ----------------------- -->
+
+<!-- ### k-means para 3 palavras -->
+
+<!-- ```{r,warning=F} -->
+<!-- source("plot_kmeans.R") -->
+
+<!-- #Analise de Agrupamento -->
+<!-- #k-medias: -->
+
+<!-- wordcloud_kmeans3=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=F,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 3) -->
+
+<!-- a3=t(as.matrix(wordcloud_kmeans3$tdm)) -->
+
+<!-- rowTotals <- apply(a3, 1, sum) #Find the sum of words in each Document -->
+<!-- a3   <- a3[rowTotals> 0, ]           #remove all docs without words -->
+<!-- a3=t(a3) -->
+
+
+<!-- g3=plot_kmeans(a3,4) -->
+<!-- plotly::ggplotly(g3) -->
+<!-- ``` -->
+
+
+<!-- ### k-means para 4 palavras -->
+
+<!-- ```{r,warning=F} -->
+<!-- source("plot_kmeans.R") -->
+
+<!-- #Analise de Agrupamento -->
+<!-- #k-medias: -->
+
+<!-- wordcloud_kmeans4=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=F,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 4) -->
+
+<!-- a4=t(as.matrix(wordcloud_kmeans4$tdm)) -->
+
+<!-- rowTotals <- apply(a4, 1, sum) #Find the sum of words in each Document -->
+<!-- a4   <- a4[rowTotals> 0, ]           #remove all docs without words -->
+<!-- a4=t(a4) -->
+
+
+<!-- plot_kmeans(a4,4) -->
+
+<!-- ``` -->
