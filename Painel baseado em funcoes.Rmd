@@ -409,22 +409,22 @@ terms=as.character(head(wordcloud_freq$freqTable,n=20)$word)
 findAssocs(wordcloud_freq$tdm, terms = terms , corlimit = .25)
 ```
 
-### Plot das Associações entre palavras segundo a frequencia
+<!-- ### Plot das Associações entre palavras segundo a frequencia -->
 
-```{r,warning=F}
-wordcloud_freq=rquery.wordcloud(x, type=c("text"),
-                             lang="portuguese", excludeWords=stopwords_adicionais,
-                             textStemming=T,  colorPalette="black",
-                             min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F)
+<!-- ```{r,warning=F} -->
+<!-- wordcloud_freq=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=T,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F) -->
 
-terms=as.character(head(wordcloud_freq$freqTable,n=20)$word)
+<!-- terms=as.character(head(wordcloud_freq$freqTable,n=20)$word) -->
 
-#Buscando associações entre as palavras mais faladas:
-#findAssocs(wordcloud_freq$tdm, terms = terms , corlimit = .25)
+<!-- #Buscando associações entre as palavras mais faladas: -->
+<!-- #findAssocs(wordcloud_freq$tdm, terms = terms , corlimit = .25) -->
 
-plot(wordcloud_freq$tdm, terms = terms, corThreshold = .25)
+<!-- plot(wordcloud_freq$tdm, terms = terms, corThreshold = .25) -->
 
-```
+<!-- ``` -->
 
 
 Row
@@ -445,22 +445,22 @@ findAssocs(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf , corlimit = .11)
 
 ```
 
-### plot das Associações entre palavras segundo o peso tf.idf
+<!-- ### plot das Associações entre palavras segundo o peso tf.idf -->
 
-```{r,warning=F}
-wordcloud_freq_tf.idf=rquery.wordcloud(x, type=c("text"),
-                             lang="portuguese", excludeWords=stopwords_adicionais,
-                             textStemming=T,  colorPalette="black",
-                             min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F)
+<!-- ```{r,warning=F} -->
+<!-- wordcloud_freq_tf.idf=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=T,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F) -->
 
-terms_tf.idf=as.character(head(wordcloud_freq_tf.idf$freqTable,n=20)$word)
+<!-- terms_tf.idf=as.character(head(wordcloud_freq_tf.idf$freqTable,n=20)$word) -->
 
-#Buscando associações entre as palavras mais faladas:
-#findAssocs(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf , corlimit = .11)
+<!-- #Buscando associações entre as palavras mais faladas: -->
+<!-- #findAssocs(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf , corlimit = .11) -->
 
-plot(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf, corThreshold = .11)
+<!-- plot(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf, corThreshold = .11) -->
 
-```
+<!-- ``` -->
 
 
 Agrupamento
