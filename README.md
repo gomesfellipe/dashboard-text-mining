@@ -83,3 +83,7 @@ Na última aba foi apresentado uma aplicação do algorítimo k-means, uma técn
 Em conjunto com a função `ggplotly` do pacote [plotly](https://cran.r-project.org/web/packages/plotly) fica muito simples tornar esta imagem interativa, veja:
 
 ![](fig/gif4.gif)
+
+## Considerações Finais
+
+Criar este dashboard foi bem divertido e serviu como um treino prático para criar dashboards e aplicativos shiny. Não foram feitas novas alterações no painel e a idéia serviu de impulso para criar um aplicativo shinny que fosse responsável por gerar 1 nuvem de palavra a partir de qualquer base de dados obtida com a ferramenta [Social Searcher](https://www.social-searcher.com/) de forma que o usuário pudesse escolher os parâmetros de funcionalidades como as apresentadas aqui para sua nuvem e salvá-la para o uso posterior em seus relatórios.
