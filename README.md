@@ -40,13 +40,13 @@ Mais informações sobre funções de textmining podem ser obtidas [neste link](
 
 ## Dashboard
 
-Este dashboard conta com 5 abas. Além da base de dados obtida com o [Social Searcher](https://www.social-searcher.com/), também foi utilizada o pacote [lexiconPT](https://cran.r-project.org/web/packages/lexiconPT/index.html) que conta com alguns datasets lexicos para  análise de texto em português. Com essa duas bases foi computada a interseção e os sentimentos de cada palavra foram registrados (qualquer nova palavra pode ser adicionada ao dicionário lexico posteriormente para enriquecer a apresentação visual).
+Este dashboard conta com 5 abas. Além da base de dados obtida com o [Social Searcher](https://www.social-searcher.com/), também foi utilizada o pacote [lexiconPT](https://cran.r-project.org/web/packages/lexiconPT/index.html) que conta com alguns datasets léxicos para  análise de texto em português. Com essa duas bases foi computada a interseção e os sentimentos de cada palavra foram registrados (qualquer nova palavra pode ser adicionada ao dicionário léxico posteriormente para enriquecer a apresentação visual).
 
 #### "Sem remover sufixos"
 
 A primeira parte do dashboard apresenta 4 nuvens de palavras, na parte superior a primeira nuvem não foi feita a transformação [tf-idf](https://pt.wikipedia.org/wiki/Tf%E2%80%93idf), já na nuvem a direita essa transformação foi feita e ambas dispostas lado a lado para avaliar o efeito da transformação no shape da nuvem.
 
-Já as nuvems da parte inferior são versões das nuvens acima, realizando a análise lexical.
+Já as nuvens da parte inferior são versões das nuvens acima, realizando a análise lexical.
 
 ![](fig/gif1.gif)
 
@@ -78,12 +78,8 @@ O dendograma pode ser apresentado de muitas formas diferentes, então nesta apre
 
 #### "k-means"
 
-Na última aba foi apresentado uma aplicação do algorítimo k-means, uma técninca simples de agrupamento utilizado em procedimentos não supervisionados de machine learning.
+Na última aba foi apresentado uma aplicação do algorítimo k-means, uma técnica simples de agrupamento utilizado em procedimentos não supervisionados de machine learning.
 
 Em conjunto com a função `ggplotly` do pacote [plotly](https://cran.r-project.org/web/packages/plotly) fica muito simples tornar esta imagem interativa, veja:
 
 ![](fig/gif4.gif)
-
-## Considerações Finais
-
-Criar este dashboard foi bem divertido e serviu como um treino prático para criar dashboards e aplicativos shiny. Não foram feitas novas alterações no painel e a idéia serviu de impulso para criar um aplicativo shinny que fosse responsável por gerar 1 nuvem de palavra a partir de qualquer base de dados obtida com a ferramenta [Social Searcher](https://www.social-searcher.com/) de forma que o usuário pudesse escolher os parâmetros de funcionalidades como as apresentadas aqui para sua nuvem e salvá-la para o uso posterior em seus relatórios.
