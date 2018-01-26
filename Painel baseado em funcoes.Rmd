@@ -1,5 +1,5 @@
 ---
-title: "Dashboard text mining dataprev"
+title: "Dashboard text mining"
 output: 
   flexdashboard::flex_dashboard:
     vertical_layout: fill
@@ -82,7 +82,7 @@ rm_accent <- function(str,pattern="all") {
 }
 
 #Stopwords adicionais:
-stopwords_adicionais=c("pro", "pra", "ano", "anos", "vai", "vamos","faz","sit","bom dia","boa tarde", "boa noite", "por favor", "favor", "por","jeito", "fazer", "faz", "fiz", "aparece", "apareceu", "fica", "nada", "ver", "ter", "pois", "diz", "vou", "assim", "ainda", "opcao", "pede", "ficar", "fica", "dando", "sendo", "toda", "todas", "vezes", "todo", "todos", "faco", "faço", "hora", "outra", "outras", "outro", "outros","podem", "pode", "coisa", "dar", "varias", "tudo", "mudar", "opcoes", "porque", "por que", "voce", "vc", "vcs", "deveria", "ser", "tal", "ficam", "mim", "porem")
+stopwords_adicionais=c("pro", "pra", "ano", "anos", "vai", "vamos","faz","sit","bom dia","boa tarde", "boa noite", "por favor", "favor", "por","jeito", "fazer", "faz", "fiz", "aparece", "apareceu", "fica", "nada", "ver", "ter", "pois", "diz", "vou", "assim", "ainda", "opcao", "pede", "ficar", "fica", "dando", "sendo", "toda", "todas", "vezes", "todo", "todos", "faco", "faço", "hora", "outra", "outras", "outro", "outros","podem", "pode", "coisa", "dar", "varias", "tudo", "mudar", "opcoes", "porque", "por que", "voce", "vc", "vcs", "deveria", "ser", "tal", "ficam", "mim", "porem","bom","nao")
 
 #Leitura dos dados utilizados no exemplo:
 dados <-readxl::read_excel("base.xlsx", sheet = "SINE FACIL")
