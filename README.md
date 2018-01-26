@@ -36,7 +36,7 @@ Esta pasta contém os seguintes arquivos:
     * rquery_wordcloud.R
     * score.sentiment.R
 
-Mais informações sobre funções de textmining podem ser obtidas [neste link](https://sites.google.com/site/miningtwitter/home)
+Mais informações sobre funções de textmining podem ser obtidas [neste link](https://sites.google.com/site/miningtwitter/home) ou no [repositório deste guia no github](https://github.com/gastonstat/Mining_Twitter)
 
 ## Dashboard
 
