@@ -1,0 +1,718 @@
+---
+title: "Dashboard text mining"
+output: 
+  flexdashboard::flex_dashboard:
+    vertical_layout: fill
+runtime: shiny   
+---
+
+```{r global, include=FALSE}
+library(flexdashboard)
+#Pacotes que serao utilizados:
+suppressMessages(library(stringr))   #Pacote para manipulação de strings
+suppressMessages(library(dplyr))     #Pacote para manipulação de dados
+suppressMessages(require(tm))        #Pacote de para text mining
+suppressMessages(require(caret))     #Pacote para matriz de confusao
+suppressMessages(require(wordcloud)) #Pacote para nuvem de palavras
+suppressMessages(require(readxl))    #Pacote para leitura de dados excel
+suppressMessages(require(e1071))     #PAcote para rodar o modelo naive bayes
+suppressMessages(library(tidytext))  #Manipulação de textos
+suppressMessages(library(reshape2))  #Manipulação de dados
+suppressMessages(library(lexiconPT)) #Importar palavras de sentimentos
+suppressMessages(library(cluster))   #Para utilizar metodo AGNES
+suppressMessages(library(SnowballC)) #Para identificar os radicais
+
+
+#++++++++++++++++++++++++++++++++++
+# Funcoes para limpeza da base de dados
+#++++++++++++++++++++++++++++++++++
+
+source("catch_error.R")
+source("cleanTweets.R")
+source("cleanTweetsAndRemoveNAs.R")
+source("html_to_text.R")
+source("rquery_wordcloud.R")
+
+# Remover acentos
+rm_accent <- function(str,pattern="all") {
+  # Rotinas e funções úteis V 1.0
+  # rm.accent - REMOVE ACENTOS DE PALAVRAS
+  # Função que tira todos os acentos e pontuações de um vetor de strings.
+  # Parâmetros:
+  # str - vetor de strings que terão seus acentos retirados.
+  # patterns - vetor de strings com um ou mais elementos indicando quais acentos deverão ser retirados.
+  #            Para indicar quais acentos deverão ser retirados, um vetor com os símbolos deverão ser passados.
+  #            Exemplo: pattern = c("´", "^") retirará os acentos agudos e circunflexos apenas.
+  #            Outras palavras aceitas: "all" (retira todos os acentos, que são "´", "`", "^", "~", "¨", "ç")
+  if(!is.character(str))
+    str <- as.character(str)
+  
+  pattern <- unique(pattern)
+  
+  if(any(pattern=="Ç"))
+    pattern[pattern=="Ç"] <- "ç"
+  
+  symbols <- c(
+    acute = "áéíóúÁÉÍÓÚýÝ",
+    grave = "àèìòùÀÈÌÒÙ",
+    circunflex = "âêîôûÂÊÎÔÛ",
+    tilde = "ãõÃÕñÑ",
+    umlaut = "äëïöüÄËÏÖÜÿ",
+    cedil = "çÇ"
+  )
+  
+  nudeSymbols <- c(
+    acute = "aeiouAEIOUyY",
+    grave = "aeiouAEIOU",
+    circunflex = "aeiouAEIOU",
+    tilde = "aoAOnN",
+    umlaut = "aeiouAEIOUy",
+    cedil = "cC"
+  )
+  
+  accentTypes <- c("´","`","^","~","¨","ç")
+  
+  if(any(c("all","al","a","todos","t","to","tod","todo")%in%pattern)) # opcao retirar todos
+    return(chartr(paste(symbols, collapse=""), paste(nudeSymbols, collapse=""), str))
+  
+  for(i in which(accentTypes%in%pattern))
+    str <- chartr(symbols[i],nudeSymbols[i], str)
+  
+  return(str)
+}
+
+#Stopwords adicionais:
+stopwords_adicionais=c("pro", "pra", "ano", "anos", "vai", "vamos","faz","sit","bom dia","boa tarde", "boa noite", "por favor", "favor", "por","jeito", "fazer", "faz", "fiz", "aparece", "apareceu", "fica", "nada", "ver", "ter", "pois", "diz", "vou", "assim", "ainda", "opcao", "pede", "ficar", "fica", "dando", "sendo", "toda", "todas", "vezes", "todo", "todos", "faco", "faço", "hora", "outra", "outras", "outro", "outros","podem", "pode", "coisa", "dar", "varias", "tudo", "mudar", "opcoes", "porque", "por que", "voce", "vc", "vcs", "deveria", "ser", "tal", "ficam", "mim", "porem","bom","nao","vagas","app","vaga","aplicativo")
+
+#Leitura dos dados utilizados no exemplo:
+dados <-readxl::read_excel("base.xlsx", sheet = "SINE FACIL")
+
+#Coluna com os textos:
+x=dados%>%
+  filter(!is.na(`Review Text`))
+
+#Arrumando codificacao
+for(i in 1:length(x)){
+  x[i]=iconv(x[i],"UTF-8","utf8", sub = "byte")
+}
+
+#Removendo linhas duplicadas:
+x=dados$`Review Text`[!is.na(dados$`Review Text`)]
+x=unique(x)
+
+```
+
+Sem Remover Sufixos
+===================
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+Painel de controle para número de palavras
+
+```{r,warning=F}
+sliderInput("nn", label = "Número de palavras:",
+            min = 10, max = 100, value = 1, step = 10)
+
+sliderInput("n2", label = "Número máximo de palavras na núvem:",
+            min = 25, max = 200, value = 25, step = 25)
+
+selectInput("n1", label = "Min.freq:",
+             choices = c(1, 3, 5, 10, 15), selected = 1)
+
+```
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### 1 Palavras mais frequentes
+
+```{r,warning=F}
+wordcloud_freq1=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="black",
+                             min.freq=3, max.words=50,rm.accent=T,tf.idf=F,print=F)
+
+words_hist1 = wordcloud_freq1$freqTable%>%
+  select(word, freq)
+
+renderPlot({
+  # hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+  #      xlab = "Duration (minutes)", main = "Geyser Eruption Duration")
+  #
+  # dens <- density(faithful$eruptions, adjust = input$n)
+  # lines(dens, col = "blue")
+  head(words_hist1,n=input$nn)%>%
+  ggplot(aes(reorder(word,freq), freq)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  scale_y_continuous(breaks=seq(0,max(words_hist1$freq),round((max(words_hist1$freq)-min(words_hist1$freq))/10,0)))+
+  #geom_text(aes(hjust = 1.3, label = freq)) +
+  coord_flip() +
+  labs(title = "Palavras mais mencionadas",  x = "Palavras", y = "Número de usos")
+#plotly::ggplotly(g)
+})
+
+```
+
+### 2 Palavras mais frequentes
+
+```{r,warning=F}
+wordcloud_freq2=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="black",
+                             min.freq=1, max.words=50,rm.accent=T,tf.idf=F,print=F,ngrams = 2)
+
+words_hist2 = wordcloud_freq2$freqTable%>%
+  select(word, freq)
+
+renderPlot({
+  # hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+  #      xlab = "Duration (minutes)", main = "Geyser Eruption Duration")
+  #
+  # dens <- density(faithful$eruptions, adjust = input$n)
+  # lines(dens, col = "blue")
+  head(words_hist2,n=input$nn)%>%
+  ggplot(aes(reorder(word,freq), freq)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  scale_y_continuous(breaks=seq(0,max(words_hist2$freq),round((max(words_hist2$freq)-min(words_hist2$freq))/10,0) ))+
+  #geom_text(aes(hjust = 1.3, label = freq)) +
+  coord_flip() +
+  labs(title = "Palavras mais mencionadas",  x = "Palavras", y = "Número de usos")
+#plotly::ggplotly(g)
+})
+
+```
+
+### 3 Palavras mais frequentes
+
+```{r,warning=F}
+wordcloud_freq3=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="black",
+                             min.freq=1, max.words=50,rm.accent=T,tf.idf=F,print=F,ngrams = 3)
+
+words_hist3 = wordcloud_freq3$freqTable%>%
+  select(word, freq)
+
+renderPlot({
+  # hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+  #      xlab = "Duration (minutes)", main = "Geyser Eruption Duration")
+  #
+  # dens <- density(faithful$eruptions, adjust = input$n)
+  # lines(dens, col = "blue")
+  head(words_hist3,n=input$nn)%>%
+  ggplot(aes(reorder(word,freq), freq)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  scale_y_continuous(breaks=seq(0,max(words_hist3$freq),round((max(words_hist3$freq)-min(words_hist3$freq))/10,0) ))+
+  #geom_text(aes(hjust = 1.3, label = freq)) +
+  coord_flip() +
+  labs(title = "Palavras mais mencionadas",  x = "Palavras", y = "Número de usos")
+#plotly::ggplotly(g)
+})
+
+```
+
+### 4 Palavras mais frequentes
+
+```{r,warning=F}
+wordcloud_freq4=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="black",
+                             min.freq=1, max.words=50,rm.accent=T,tf.idf=F,print=F,ngrams = 4)
+
+words_hist4 = wordcloud_freq4$freqTable%>%
+  select(word, freq)
+
+renderPlot({
+  # hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+  #      xlab = "Duration (minutes)", main = "Geyser Eruption Duration")
+  #
+  # dens <- density(faithful$eruptions, adjust = input$n)
+  # lines(dens, col = "blue")
+  head(words_hist4,n=input$nn)%>%
+  ggplot(aes(reorder(word,freq), freq)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  scale_y_continuous(breaks=seq(0,max(words_hist4$freq),(max(words_hist4$freq)-min(words_hist4$freq))/10 ))+
+  #geom_text(aes(hjust = 1.3, label = freq)) +
+  coord_flip() +
+  labs(title = "Palavras mais mencionadas",  x = "Palavras", y = "Número de usos")
+#plotly::ggplotly(g)
+})
+
+```
+
+Sem tf.idf
+-------------------------------------
+    
+### Nuvem de frequencia de palavras (cor: black, tf.idf=F, textStemming=F)
+    
+```{r,warning=F}
+renderPlot({
+wordcloud1=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="black",
+                             min.freq=input$n1, max.words=input$n2,rm.accent=T,tf.idf=F)
+})
+
+```
+ 
+### Nuvem de frequência de palavras (cor: sentiment , tf.idf=F, textStemming=F)
+    
+```{r,warning=F}
+renderPlot({
+wordcloud2=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="sentiment",
+                             min.freq=input$n1, max.words=input$n2,rm.accent=T,tf.idf=F)
+})
+``` 
+
+Com tf.idf
+-------------------------------------
+    
+### Nuvem de relevância de palavras (cor: black, tf.idf=T, textStemming=F)
+    
+```{r,warning=F}
+renderPlot({
+wordcloud3=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="black",
+                             min.freq=input$n1, max.words=input$n2,rm.accent=T,tf.idf=T)
+})
+```
+    
+### Nuvem de relevância de palavras (cor: sentiment , tf.idf=T, textStemming=F)
+    
+```{r,warning=F}
+renderPlot({
+wordcloud4=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=FALSE,  colorPalette="sentiment",
+                             min.freq=input$n1, max.words=input$n2,rm.accent=T,tf.idf=T)
+})
+``` 
+
+Removendo sufixos
+===================
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+Painel de controle para número de palavras
+
+```{r,warning=F}
+sliderInput("nn", label = "Número de palavras:",
+            min = 10, max = 100, value = 1, step = 10)
+
+# selectInput("n1", label = "Min.freq:",
+#              choices = c(1, 3, 5, 10, 15), selected = 3)
+
+# selectInput("n2", label = "Número máximo de palavras na núvem:",
+#              choices = c(20, 35, 50, 70, 100), selected = 20)
+```
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+
+### Palavras mais frequentes
+
+```{r,warning=F}
+wordcloud_freq=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=T,  colorPalette="black",
+                             min.freq=3, max.words=50,rm.accent=T,tf.idf=F,print=F)
+
+words_hist = wordcloud_freq$freqTable%>%
+  select(word, freq)
+
+renderPlot({
+  # hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+  #      xlab = "Duration (minutes)", main = "Geyser Eruption Duration")
+  #
+  # dens <- density(faithful$eruptions, adjust = input$n)
+  # lines(dens, col = "blue")
+  head(words_hist,n=input$nn)%>%
+  ggplot(aes(reorder(word,freq), freq)) +
+  geom_bar(stat = "identity", color = "black", fill = "#87CEFA") +
+  scale_y_continuous(breaks=seq(0,max(words_hist$freq),10))+
+  #geom_text(aes(hjust = 1.3, label = freq)) +
+  coord_flip() +
+  labs(title = "Palavras mais mencionadas",  x = "Palavras", y = "Número de usos")
+#plotly::ggplotly(g)
+})
+
+```
+
+
+Sem tf.idf
+-------------------------------------
+    
+### Nuvem de frequencia de palavras (cor: black, tf.idf=F, textStemming=T)
+    
+```{r,warning=F}
+wordcloud1=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=T,  colorPalette="black",
+                             min.freq=3, max.words=50,rm.accent=T,tf.idf=F)
+
+
+```
+ 
+### Nuvem de frequência de palavras (cor: sentiment , tf.idf=F, textStemming=T)
+    
+```{r,warning=F}
+wordcloud2=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=T,  colorPalette="sentiment",
+                             min.freq=3, max.words=50,rm.accent=T,tf.idf=F,ngrams = 2)
+
+``` 
+
+Com tf.idf
+-------------------------------------
+    
+### Nuvem de relevância de palavras (cor: black, tf.idf=T, textStemming=T)
+    
+```{r,warning=F}
+wordcloud3=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=T,  colorPalette="black",
+                             min.freq=3, max.words=50,rm.accent=T,tf.idf=T)
+```
+    
+### Nuvem de relevância de palavras (cor: sentiment , tf.idf=T, textStemming=T)
+    
+```{r,warning=F}
+wordcloud4=rquery.wordcloud(x, type=c("text"), 
+                             lang="portuguese", excludeWords=stopwords_adicionais, 
+                             textStemming=T,  colorPalette="sentiment",
+                             min.freq=3, max.words=50,rm.accent=T,tf.idf=T)
+``` 
+
+Associação entre palavras
+==================
+
+Row
+-------------------------
+    
+### Associações entre palavras segundo a frequencia
+
+```{r,warning=F}
+wordcloud_freq=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=T,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F)
+
+terms=as.character(head(wordcloud_freq$freqTable,n=20)$word)
+
+#Buscando associações entre as palavras mais faladas:
+findAssocs(wordcloud_freq$tdm, terms = terms , corlimit = .25)
+```
+
+<!-- ### Plot das Associações entre palavras segundo a frequencia -->
+
+<!-- ```{r,warning=F} -->
+<!-- wordcloud_freq=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=T,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F) -->
+
+<!-- terms=as.character(head(wordcloud_freq$freqTable,n=20)$word) -->
+
+<!-- #Buscando associações entre as palavras mais faladas: -->
+<!-- #findAssocs(wordcloud_freq$tdm, terms = terms , corlimit = .25) -->
+
+<!-- plot(wordcloud_freq$tdm, terms = terms, corThreshold = .25) -->
+
+<!-- ``` -->
+
+
+Row
+-------------------------
+
+### Associações entre palavras segundo o peso tf.idf
+
+```{r,warning=F}
+wordcloud_freq_tf.idf=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=T,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F)
+
+terms_tf.idf=as.character(head(wordcloud_freq_tf.idf$freqTable,n=20)$word)
+
+#Buscando associações entre as palavras mais faladas:
+findAssocs(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf , corlimit = .11)
+
+```
+
+<!-- ### plot das Associações entre palavras segundo o peso tf.idf -->
+
+<!-- ```{r,warning=F} -->
+<!-- wordcloud_freq_tf.idf=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=T,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F) -->
+
+<!-- terms_tf.idf=as.character(head(wordcloud_freq_tf.idf$freqTable,n=20)$word) -->
+
+<!-- #Buscando associações entre as palavras mais faladas: -->
+<!-- #findAssocs(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf , corlimit = .11) -->
+
+<!-- plot(wordcloud_freq_tf.idf$tdm, terms = terms_tf.idf, corThreshold = .11) -->
+
+<!-- ``` -->
+
+
+Agrupamento
+==================
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+Painel de controle para número de clusters
+
+```{r,warning=F}
+sliderInput("nnclusters", label = "Número de clusters:",
+            min = 1, max = 5, value = 2, step = 1)
+
+# selectInput("ngrams", label = "N grams",
+#              choices = c(1, 2, 3, 4, 5), selected = 1)
+
+# selectInput("n2", label = "Número máximo de palavras na núvem:",
+#              choices = c(20, 35, 50, 70, 100), selected = 1)
+```
+
+Row
+-------------------------
+    
+### Dendograma de frequência de palavras 
+
+```{r,warning=F}
+wordcloud_cluster=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=F,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F)
+
+# Eliminando termos dispersos
+cluster = removeSparseTerms(wordcloud_cluster$tdm, sparse = .97)
+cluster = cluster %>%
+  as.matrix()
+
+#Matriz de distâncias:
+cluster = cluster / rowSums(cluster)
+cluster_dist = dist(cluster, method = "euclidian")
+
+renderPlot({
+#hclust
+k=input$nnclusters #Numero de clusters
+cluster_hclust =  hclust(cluster_dist, method = "ward.D")
+#Graficamente
+plot(cluster_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
+#Separando em grupos:
+rect.hclust(cluster_hclust, k = k, border="blue")
+})
+```
+
+
+### Dendograma de relevância de palavras 
+
+```{r,warning=F}
+wordcloud_cluster_tf.idf=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=F,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F)
+
+# Eliminando termos dispersos
+cluster_tf.idf = removeSparseTerms(wordcloud_cluster_tf.idf$tdm, sparse = .97)
+cluster_tf.idf = cluster_tf.idf %>%
+  as.matrix()
+
+#Matriz de distâncias:
+cluster_tf.idf = cluster_tf.idf / rowSums(cluster_tf.idf)
+cluster_tf.idf_dist = dist(cluster_tf.idf, method = "euclidian")
+
+renderPlot({
+#hclust
+k=input$nnclusters #Numero de clusters
+cluster_tf.idf_hclust =  hclust(cluster_tf.idf_dist, method = "ward.D")
+#Graficamente
+plot(cluster_tf.idf_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
+#Separando em grupos:
+rect.hclust(cluster_tf.idf_hclust, k = k, border="blue")
+})
+```
+
+Row
+-------------------------
+
+### Mesmo dendograma de frequência de palavras 
+
+```{r,warning=F}
+wordcloud_cluster2=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=F,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F)
+
+# Eliminando termos dispersos
+cluster2 = removeSparseTerms(wordcloud_cluster2$tdm, sparse = .97)
+cluster2 = cluster2 %>%
+  as.matrix()
+
+#Matriz de distâncias:
+cluster2 = cluster2 / rowSums(cluster2)
+cluster2_dist = dist(cluster2, method = "euclidian")
+
+renderPlot({
+#hclust
+k=input$nnclusters #Numero de clusters
+cluster2_hclust =  hclust(cluster2_dist, method = "ward.D")
+
+#Graficamente
+# plot(cluster2_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
+# #Separando em grupos:
+# rect.hclust(cluster2_hclust, k = k, border="blue")
+
+colors = brewer.pal(k,"Dark2")
+clus = cutree(cluster2_hclust, k)
+plot(ape::as.phylo(cluster2_hclust), type = "unrooted", tip.color = colors[clus], cex = 0.6,
+     no.margin = TRUE)
+})
+```
+
+
+### Mesmo dendograma de relevância de palavras
+
+```{r,warning=F}
+wordcloud_cluster_tf.idf2=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=F,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=T,print=F)
+
+# Eliminando termos dispersos
+cluster_tf.idf2 = removeSparseTerms(wordcloud_cluster_tf.idf2$tdm, sparse = .97)
+cluster_tf.idf2 = cluster_tf.idf2 %>%
+  as.matrix()
+
+#Matriz de distâncias:
+cluster_tf.idf2 = cluster_tf.idf2 / rowSums(cluster_tf.idf2)
+cluster_tf.idf2_dist = dist(cluster_tf.idf2, method = "euclidian")
+
+renderPlot({
+#hclust
+k=input$nnclusters #Numero de clusters
+cluster_tf.idf2_hclust =  hclust(cluster_tf.idf2_dist, method = "ward.D")
+
+# #Graficamente
+# plot(cluster_tf.idf2_hclust, main = "Dendograma de Meu INSS - hclust", sub = "", xlab = "")
+# #Separando em grupos:
+# rect.hclust(cluster_tf.idf2_hclust, k = k, border="blue")
+
+colors = brewer.pal(k,"Dark2")
+clus = cutree(cluster_tf.idf2_hclust, k)
+plot(ape::as.phylo(cluster_tf.idf2_hclust), type = "unrooted", tip.color = colors[clus], cex = 0.6,
+     no.margin = TRUE)
+})
+```
+
+k-means
+======
+
+Row
+------------------------------------------------------------------------
+
+### k-means
+
+```{r,warning=F}
+source("plot_kmeans.R")
+
+#Analise de Agrupamento
+#k-medias:
+
+wordcloud_kmeans=rquery.wordcloud(x, type=c("text"),
+                             lang="portuguese", excludeWords=stopwords_adicionais,
+                             textStemming=F,  colorPalette="black",
+                             min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 1)
+
+a=t(as.matrix(wordcloud_kmeans$tdm))
+
+rowTotals <- apply(a, 1, sum) #Find the sum of words in each Document
+a   <- a[rowTotals> 0, ]           #remove all docs without words
+a=t(a)
+
+g1=plot_kmeans(a,4)
+plotly::ggplotly(g1)
+```
+
+<!-- ### k-means para 2 palavras -->
+
+<!-- ```{r,warning=F} -->
+<!-- source("plot_kmeans.R") -->
+
+<!-- #Analise de Agrupamento -->
+<!-- #k-medias: -->
+
+<!-- wordcloud_kmeans2=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=F,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 2) -->
+
+<!-- a2=t(as.matrix(wordcloud_kmeans2$tdm)) -->
+
+<!-- rowTotals <- apply(a2, 1, sum) #Find the sum of words in each Document -->
+<!-- a2   <- a2[rowTotals> 0, ]           #remove all docs without words -->
+<!-- a2=t(a2) -->
+
+<!-- plot_kmeans(a2,4) -->
+<!-- ``` -->
+
+<!-- Row -->
+<!-- ----------------------- -->
+
+<!-- ### k-means para 3 palavras -->
+
+<!-- ```{r,warning=F} -->
+<!-- source("plot_kmeans.R") -->
+
+<!-- #Analise de Agrupamento -->
+<!-- #k-medias: -->
+
+<!-- wordcloud_kmeans3=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=F,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 3) -->
+
+<!-- a3=t(as.matrix(wordcloud_kmeans3$tdm)) -->
+
+<!-- rowTotals <- apply(a3, 1, sum) #Find the sum of words in each Document -->
+<!-- a3   <- a3[rowTotals> 0, ]           #remove all docs without words -->
+<!-- a3=t(a3) -->
+
+
+<!-- g3=plot_kmeans(a3,4) -->
+<!-- plotly::ggplotly(g3) -->
+<!-- ``` -->
+
+
+<!-- ### k-means para 4 palavras -->
+
+<!-- ```{r,warning=F} -->
+<!-- source("plot_kmeans.R") -->
+
+<!-- #Analise de Agrupamento -->
+<!-- #k-medias: -->
+
+<!-- wordcloud_kmeans4=rquery.wordcloud(x, type=c("text"), -->
+<!--                              lang="portuguese", excludeWords=stopwords_adicionais, -->
+<!--                              textStemming=F,  colorPalette="black", -->
+<!--                              min.freq=3, max.words=200,rm.accent=T,tf.idf=F,print=F,ngrams = 4) -->
+
+<!-- a4=t(as.matrix(wordcloud_kmeans4$tdm)) -->
+
+<!-- rowTotals <- apply(a4, 1, sum) #Find the sum of words in each Document -->
+<!-- a4   <- a4[rowTotals> 0, ]           #remove all docs without words -->
+<!-- a4=t(a4) -->
+
+
+<!-- plot_kmeans(a4,4) -->
+
+<!-- ``` -->
