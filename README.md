@@ -5,11 +5,11 @@ Link de acesso ao dashboard : [https://gomesfellipe.shinyapps.io/dashboard-text-
 
 ## Motivação
 
-Elaborar este dashboard foi uma tarefa que decidi executar pois me foi perguntado se era possível "alguma coisa" com os obtidos através da ferramenta [Social Searcher](https://www.social-searcher.com/) responsável por captar informações  de diferentes mídias sociais sob algum tópico de interesse.
+Elaborar este dashboard foi uma tarefa que decidi executar pois me foi perguntado se era possível "alguma coisa" com os dados obtidos através da ferramenta [Social Searcher](https://www.social-searcher.com/) responsável por captar informações  de diferentes mídias sociais sob algum tópico de interesse.
 
-Decidi então praticar a criação de dashboards com R e juntei algumas abordagens simples de text mining em um dashboard produzido através do pacote [flexdashboard](http://rmarkdown.rstudio.com/flexdashboard/) disponível no CRAN.
+Decidi então praticar a criação de dashboards com R e juntei algumas abordagens simples de text mining em um dashboard produzido através do pacote [flexdashboard](http://rmarkdown.rstudio.com/flexdashboard/), disponível no CRAN.
 
-Portanto este dashboard não foi programado para funcionar de maneira genérica, as diversas funcionalidades devem ser adaptadas caso seja utilizado para analisas novas bases.
+Portanto este dashboard não foi programado para funcionar de maneira genérica, as diversas funcionalidades devem ser adaptadas caso seja utilizado para analisar novas bases.
 
 ## Arquivos
 
